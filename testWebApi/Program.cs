@@ -1,4 +1,8 @@
 
+using Infrastructure;
+using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Serialization;
+
 namespace testWebApi
 {
     public class Program
@@ -14,10 +18,27 @@ namespace testWebApi
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
-            var app = builder.Build();
+			builder.Services.AddDbContext<StoreContext>(options =>
+	            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+		
+			    builder.Services.AddControllers()
+				    .AddJsonOptions(options =>
+				    {
+					    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+					    options.JsonSerializerOptions.WriteIndented = true;
+			});
 
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
+			var app = builder.Build();
+
+			using (var scope = app.Services.CreateScope())
+			{
+				var services = scope.ServiceProvider;
+				var context = services.GetRequiredService<StoreContext>();
+				DbInitializer.Initialize(context);
+			}
+
+			// Configure the HTTP request pipeline.
+			if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
